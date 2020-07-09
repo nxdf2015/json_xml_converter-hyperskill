@@ -6,12 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Converter {
-    private Pattern jsonPattern = Pattern.compile("^\\{\"(.+)\"\\s*\\:\\s*(.+)\\}");
-    private Pattern xmlPatternTag = Pattern.compile("^(<(.+)/>)");
-    private Pattern xmlPatternValue = Pattern.compile("^<(.+)>(.+)</.+>");
-    private Pattern xmlPatternValueAttribute = Pattern.compile("^<([^=]+)\\s+(.+)>(.+)</\\1>");
-    private Pattern xmlPatternAttribute = Pattern.compile("^<([^=]+) (.+)\\s*/>");
-    private Pattern patternAttribute = Pattern.compile("(.+\\s?=\\s?.+\\s+)*(.+\\s?=\\s?.+)");
+
 
     public Map<String, String> getAttributes(String attributes) {
 
