@@ -1,111 +1,57 @@
 package converter;
 
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Map.Entry;
+
+
 
 public class Converter {
+	 public String expandXML(String line){
+	        return expandXML(line,"");
+	    }
+       
+	    public String expandXML(String line, String path) {
 
-
-    public Map<String, String> getAttributes(String attributes) {
-
-        Pattern patternAttributes = Pattern.compile("(\\w+\\s?=\\s?\"[\\w0-9]+\"\\s?)");
-        Matcher matcherAttribute = patternAttributes.matcher(attributes);
-
-        Map attributesMap = new HashMap();
-        while (matcherAttribute.find()) {
-            String group = matcherAttribute.group(1).replaceAll("(\"|\\s)", "");
-
-            String[] items = group.split("\\s?=\\s?");
-            attributesMap.put(items[0], items[1]);
-        }
-        return attributesMap;
-    }
-
-    public String toJSON(String line) {
-        Pattern xmlPattern = Pattern.compile("^<(?<tag>\\w+)\\s?(?<attributes>.+?)\\s?(/>|>)((?<content>.+?)?</\\k<tag>>)?");
-        Matcher matcher = xmlPattern.matcher(line);
-        matcher.matches();
-        String tag = matcher.group("tag");
-
-        String attributes = matcher.group("attributes");
-        String content = matcher.group("content");
-
-        Map<String, String> attributesMap;
-        String result = "";
-
-        if (attributes == null) {
-            result = String.format("{\"%s\":\"%s\"}", tag, content);
-
-        } else {
-
-            attributesMap = getAttributes(attributes);
-            StringBuilder builderAttribute = new StringBuilder();
-            for (Map.Entry<String, String> entry : attributesMap.entrySet()) {
-
-                builderAttribute.append(String.format("\"@%s\":\"%s\",", entry.getKey(), entry.getValue()));
-            }
-            String formatContent = content == null ? "null" : "\"" + content + "\"";
-            result += String.format("{\"%1$s\":{%2$s \"#%1$s\":%3$s", tag, builderAttribute.toString(), formatContent) + "}}";
-        }
-
-        return result;
-    }
-
-    public String toXML(String line) {
-        // match line with { tag : content }
-        Pattern jsonPattern = Pattern.compile("\\{.+?\"(?<tag>.+?)\" : \\{?(?<content>.+)\\}?.+?\\}");
-
-        // match content with { @attribute : value #content : value }
-        Pattern attributePattern = Pattern.compile("\"(?<key>(#|@)\\w+)\"\\s:\\s\"?(?<value>[\\w\\d]+)\"?");
-
-        Matcher matcher = jsonPattern.matcher(line);
-        matcher.matches();
-
-        String tag = matcher.group("tag").trim();
-        String contentElt = matcher.group("content");
-
-
-        matcher = attributePattern.matcher(contentElt);
-        StringBuilder builder = new StringBuilder("");
-        String content = "";
-        if ((matcher.find())) {
-
-            boolean next;
-
-            do {
-                String key = matcher.group("key");
-                String value = matcher.group("value");
-
-                if (key.startsWith("@")) {
-                    builder.append(String.format("%s = \"%s\"", key.substring(1, key.length()), value));
-                } else {
-                    content = value;
-                }
-                next = matcher.find();
-                if (next && !matcher.group("key").startsWith("#")) {
-                    builder.append(" ");
-                }
-
-            } while (next);
-        } else {
-            content = contentElt.replaceAll("\"", "");
-        }
-
-
-        String attributes = builder.toString();
-        String result = String.format("<%s", tag);
-        if (!attributes.isEmpty())
-            result += String.format(" %s", attributes);
-
-        if (content.equals("null")) {
-            result += "/>";
-        } else {
-            result += ">" + content + String.format("</%s>", tag);
-        }
-        return result;
-    }
-
-
+	       XMLParser parser = new XMLParser(line);
+	       StringBuilder builder = new StringBuilder();
+	       
+	       path += (path.isEmpty()? "" : ", ") + parser.tag();
+	       builder.append("Element:")
+	       .append(System.lineSeparator())
+	       .append("path = "+path+System.lineSeparator());
+	       List<Tuple<String>>  attributes = parser.getAttributes();
+	       
+	      // System.out.println("attributes : " + attributes);
+	        
+	       if(parser.hasNestedElement()) {
+	    	   if(!attributes.isEmpty()) {
+				  builder.append("attributes:\n");
+				   for (Tuple<String> attribute  : attributes) {
+					   builder.append(attribute.first() + " = " + attribute.last())
+							   .append(System.lineSeparator());
+				   }
+			   }
+	    	   
+	    	  
+	    	   for(String nestedContent : parser.getNestedElement()) {
+	    	   builder.append(expandXML(nestedContent,path));
+	    	   }
+	       }
+	       else {
+	    	   String valueContent = parser.content().equals("null")   ? "null" : "\""+parser.content()+"\"";
+	    	   builder.append("value =  "+ valueContent  +System.lineSeparator());
+			   if(!attributes.isEmpty()) {
+				  builder.append("attributes:\n");
+				   for (Tuple<String> attribute  : attributes) {
+					   builder.append(attribute.first() + " = " + attribute.last())
+							   .append(System.lineSeparator());
+				   }
+			   }
+	    	   
+	       }
+	       
+	       
+	       return builder.toString();
+	    }
 }
